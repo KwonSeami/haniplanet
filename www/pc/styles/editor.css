@@ -1,0 +1,37 @@
+.fr-box.fr-basic.fr-top .fr-toolbar.fr-top {
+  border: 0;
+  border-bottom: 1px #ddd solid;
+}
+
+.fr-box.fr-basic.fr-top .fr-toolbar.fr-top .fr-newline {
+  display: none;
+}
+
+.fr-box.fr-basic.fr-top .fr-wrapper {
+  border: 0;
+}
+
+.fr-box.fr-basic.fr-top .second-toolbar {
+  display: none;
+}
+
+.fr-box.fr-basic .fr-element.fr-view {
+  font-size: 15px;
+}
+
+.fr-element.fr-view blockquote {
+  padding-left: 30px;
+}
+
+.fr-command.fr-btn.fr-active svg.fr-svg.bold text {
+  fill: #0098f7;
+}
+
+.fr-command.fr-btn .not-fill {
+  fill: inherit !important;
+}
+
+.fr-toolbar .fr-command.fr-btn svg,
+.fr-toolbar .fr-command.fr-btn img {
+  margin: 3px;
+}

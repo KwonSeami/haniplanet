@@ -1,0 +1,24 @@
+{
+  "name": "@hanii/planet-constants",
+  "version": "1.0.1",
+  "description": "haniplanet FE에서 사용하는 constants",
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haniplanet/hani-fe.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/haniplanet/issues/issues"
+  },
+  "homepage": "https://github.com/haniplanet/hani-fe#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^12.7.9"
+  }
+}

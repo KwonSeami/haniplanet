@@ -1,0 +1,20 @@
+{
+  "name": "haniplanet",
+  "version": "16.0.1",
+  "private": true,
+  "description": "project for SSR version of Haniplanet with TS",
+  "scripts": {
+    "build:packages": "npx tsc -b packages"
+  },
+  "author": "kdh",
+  "license": "MIT",
+  "repository": "https://github.com/haniplanet/haniplanet.git",
+  "devDependencies": {
+    "rollup": "^1.27.0",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-peer-deps-external": "^2.2.0",
+    "rollup-plugin-typescript2": "^0.25.2",
+    "typescript": "^3.7.2"
+  }
+}

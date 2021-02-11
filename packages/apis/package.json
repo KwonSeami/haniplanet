@@ -1,0 +1,26 @@
+{
+  "name": "@dohyeon/planet-apis",
+  "version": "1.0.1",
+  "description": "haniplanet FE에서 사용하는 api",
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d0hyeon/haniplanet.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://github.com/d0hyeon/haniplanet#readme",
+  "dependencies": {
+    "@dohyeon/planet-types": "^1.0.2",
+    "axios": "^0.19.0",
+    "axios-extensions": "^3.0.6"
+  },
+  "devDependencies": {
+    "@rollup/plugin-json": "^4.0.0",
+    "@types/axios": "^0.14.0"
+  }
+}

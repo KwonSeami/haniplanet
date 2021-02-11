@@ -1,0 +1,623 @@
+import * as React from 'react';
+import classNames from 'classnames';
+import isEmpty from 'lodash/isEmpty';
+import styled from 'styled-components';
+import queryString from 'query-string';
+import {useSelector} from 'react-redux';
+import {useRouter} from 'next/router';
+import {useQuery} from '@apollo/react-hooks';
+import {WIKIS} from '../../src/gqls/wiki';
+import OGMetaHead from '../../components/OGMetaHead';
+import WikiItem from '../../_pages/wiki/WikiItem';
+import WikiSearchForm from '../../_pages/wiki/input/WikiSearchForm';
+import SearchInput from '../../_pages/wiki/input/SearchInput';
+import Page500 from '../../components/errors/Page500';
+import Loading from '../../components/common/Loading';
+import {staticUrl} from '../../src/constants/env';
+import {backgroundImgMixin, fontStyleMixin} from '../../styles/mixins.styles';
+import {$BORDER_COLOR, $FONT_COLOR, $POINT_BLUE, $TEXT_GRAY, $WHITE, $GRAY, $FLASH_WHITE} from '../../styles/variables.types';
+import useSetPageNavigation from '../../src/hooks/useSetPageNavigation';
+import Pagination from '../../components/UI/Pagination';
+
+interface SearchParamProps {
+  q?: string;
+  page?: string;
+  order_by?: string;
+  is_detail?: boolean | string;
+  category?: string;
+  shapes?: string;
+  include_dependencies?: string;
+  exclude_dependencies?: string;
+  include_tags?: string;
+  exclude_tags?: string;
+  max_dependency_count?: number;
+  min_dependency_count?: number;
+  max_price?: number;
+  min_price?: number;
+  doc_type?: string;
+  _only?: string;
+}
+
+
+const PageWrapperSection = styled.section`
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 50px;
+  background-color: #f6f7f9;
+
+  & > div {
+    width: 800px;
+    margin:0 auto;
+  }
+`;
+
+const WikisWrapperDiv = styled.div`
+  div {
+    position: relative;
+  }
+  select {
+    min-width: 100px;
+    height: 30px; 
+    padding-right: 20px;
+    box-sizing: border-box;
+    border: 0;
+    border-bottom: 1px solid ${$BORDER_COLOR};
+    appearance: none;
+    font-size: 14px;
+    background-color: transparent;
+    ${backgroundImgMixin({
+      img: '/static/images/icon/arrow/icon-select.png',
+      size: '19px',
+      position: '100% 50%'
+    })};
+    outline: none;
+
+    &::-ms-expand {
+      display: none;
+    }
+  }
+  .content {
+    margin-top: 20px;
+    background-color: ${$WHITE};
+
+    & > div {
+      position: relative;
+      padding: 13px 20px;
+      border-bottom: 2px solid ${$FONT_COLOR};
+
+      span {
+        position: absolute;
+        right: 7px;
+        top: 50%;
+        transform: translate(0, -50%);
+      }
+    }
+
+    h2 {
+      ${fontStyleMixin({
+        size: 18,
+        weight: 'bold'
+      })};
+      line-height: 1;
+    }
+  }
+
+  .pagination {
+    margin-top: 30px;
+  }
+`;
+
+const ViewTypeDiv = styled.div`
+  display: flex;
+  padding: 20px 0;
+  font-size: 0;
+
+  & > div {
+    flex: 1;  
+
+    & ~ div {
+      text-align: right;
+    }
+  }
+
+  button {
+    display:inline-block;
+    width: 60px;
+    height: 30px;
+    border: 1px solid ${$BORDER_COLOR};
+    background-color: ${$WHITE};
+    color:${$FONT_COLOR};
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+
+    &.on {
+      border-width: 0;
+      background-color: ${$POINT_BLUE};
+      color:${$WHITE};
+    }
+
+    & ~ button {
+      margin-left: 10px;
+    }
+  }
+`;
+
+
+const DefaultUl = styled.ul`
+  & > li {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+
+    & > div {
+      position: relative;
+      padding: 10px 45px 12px 20px;
+      background-color:${$WHITE};
+      border-bottom: 1px solid #e4e6ed;
+
+      &.element {
+        padding: 20px;
+        background-color: ${$FLASH_WHITE};
+        border-left: 1px solid #e4e6ed;
+        border-right: 1px solid #e4e6ed;
+
+        p {
+          position: relative;
+          padding-left: 10px;
+          font-size: 12px;
+          line-height: 1.5;
+          /* white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis; */
+          
+          span {
+            font-size: inherit;
+            line-height: inherit
+          }
+
+          &::before {
+            position: absolute;
+            left:0;
+            top: 9px;
+            width: 4px;
+            height: 1px;
+            background-color: ${$GRAY};
+            content: '';
+          }
+
+          & ~ p {
+            margin-top: 10px;
+          }
+        }
+
+        em {
+          padding-right: 5px;
+          font-style: normal;
+          font-weight: bold;
+
+          &::before {
+            content: '[';
+          }
+          &::after {
+            content : ']';
+          }
+        }
+      }
+    }
+
+    p {
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    h3 {
+      width: 100%;
+      box-sizing: border-box;
+      ${fontStyleMixin({
+        size: 15,
+        weight: 'bold'
+      })};
+      line-height: 1.5;
+    }
+
+    i {
+      width: 100%;
+      font-style: normal;
+      ${fontStyleMixin({
+        size: 12,
+        color: $POINT_BLUE,
+        weight: 'bold'
+      })};
+      box-sizing: border-box;
+    }
+
+    .others {
+      position: relative;
+      min-height: 18px;
+      line-height: 18px;
+    }
+
+    .tags {
+      width: 100%;
+      padding: 3px 35px 3px 0;
+      box-sizing: border-box;
+      ${fontStyleMixin({
+        size: 0,
+        color: $TEXT_GRAY,
+        weight: 'bold'
+      })};
+
+      li {
+        display: inline-block;
+        font-size: 12px;
+        line-height: inherit;
+
+        & ~ li {
+          &:before {
+            content: ', '
+          }
+        }
+      }
+    }
+
+    .more {
+      position: absolute;
+      right: -20px;
+      top:0;
+      ${fontStyleMixin({
+        size: 12,
+        color: $GRAY
+      })}
+      line-height: inherit;
+      text-decoration: underline;
+      cursor:pointer;
+    }
+
+    .bookmark {
+      position: absolute;
+      right: 17px;
+      top: 15px;
+
+      img {
+        width: 17px;
+      }
+    }
+  }
+`;
+
+const SearchBtn = styled.button`
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 96px;
+  height: 40px;
+  background-color: #b3c4ce;
+  font-size: 13px;
+  color: ${$WHITE};
+  cursor:pointer;
+
+  span {
+    display: inline-block;
+    position: relative;
+    margin: 0 0 -2px 8px;
+    padding: 0;
+    width: 0;
+    height: 0;
+    border: 4px solid transparent;
+    border-top-color: #fff;
+
+    &::after {
+      display: block;
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 0;
+      height: 0;
+      left: -8px;
+      margin-top: -10px;
+      border: 8px solid transparent;
+      border-top-color: #b3c4ce;
+    }
+  }
+
+  &.on {
+    span {
+      transform-origin: 50% 25%;
+      transform: rotate(180deg);
+    }
+  }
+`;
+
+const StyledSearchInput = styled(SearchInput)`
+  background-color: ${$WHITE};
+  padding-right: 96px;
+
+  &.full {
+    padding: 0;
+  }
+
+  &.open {
+    border: 2px solid ${$POINT_BLUE};
+    border-bottom: 1px solid ${$BORDER_COLOR};
+  }
+`;
+
+const NoContentP = styled.p`
+  padding: 50px 0;
+  text-align: center;
+  font-size: 14px;
+`;
+
+
+const PAGE_SIZE = 10;
+
+const Wiki = React.memo(() => {
+
+  // Custom Hooks
+  useSetPageNavigation('/wiki');
+
+  const access = useSelector(
+    ({system: {session: {access}}}) => access,
+  );
+  const router = useRouter();
+  const {query} = router;
+  const {
+    q: _q,
+    page,
+    order_by = 'view_count_desc',
+    is_detail = false,
+    shapes = '',
+    include_dependencies = '',
+    exclude_dependencies = '',
+    include_tags = '',
+    exclude_tags = '',
+    max_dependency_count,
+    min_dependency_count,
+    max_price,
+    min_price,
+    doc_type,
+    _only: only = ''
+  }:SearchParamProps = query;
+
+  const setURL = ((callback:Function) => {
+    const searchParams:SearchParamProps = callback(query);
+    router.push(`/wiki?${queryString.stringify(searchParams)}`);
+  });
+
+  const [search, setSearch] = React.useState(_q);
+  const [isDetail, setIsDetail] = React.useState(is_detail === 'true');
+  const [orderBy] = React.useState(order_by);
+  const {error, loading, data: {wikis} = {}, updateQuery} = useQuery(WIKIS, {
+    variables: {
+      shapes: !isEmpty(shapes) ? shapes.split(',') : [],
+      include_dependencies: !isEmpty(include_dependencies) ? include_dependencies.split(',') : [],
+      exclude_dependencies: !isEmpty(exclude_dependencies) ? exclude_dependencies.split(',') : [],
+      include_tags: !isEmpty(include_tags) ? include_tags.split(',') : [],
+      exclude_tags: !isEmpty(exclude_tags) ? exclude_tags.split(',') : [],
+      max_dependency_count,
+      min_dependency_count,
+      max_price,
+      min_price,
+      limit: PAGE_SIZE,
+      offset: (parseInt(page)-1) * PAGE_SIZE,
+      q: _q,
+      doc_type: doc_type,
+      order_by: orderBy,
+      only: only || null,
+      isBookmarkedArticle: !isEmpty(only)
+    }
+  });
+
+  if (error) return <Page500/>;
+  if (loading) return <Loading/>;
+  
+  const {
+    nodes = [],
+    total_count = 0
+  } = wikis;
+
+  const title = `${total_count}개의 처방사전 목록`;
+
+  return (
+    <>
+      <OGMetaHead title={title} />
+      <PageWrapperSection>
+        <div className="container">
+          <WikisWrapperDiv>
+            <ViewTypeDiv>
+              <div>
+                <button 
+                  type="button"
+                  className={classNames({
+                    on: !doc_type
+                  })}
+                  onClick={() => {
+                    setURL(curr => {
+                      delete curr.doc_type;
+                      return {
+                        ...curr,
+                        order_by: orderBy === 'dependency_count_desc' ? 'view_count_desc' : order_by,
+                      }
+                    })
+                  }}
+                >
+                  전체
+                </button>
+                <button 
+                  type="button"
+                  className={classNames({
+                    on: doc_type === 'medicine'
+                  })}
+                  onClick={() => {
+                    setURL(curr => ({
+                      ...curr,
+                      doc_type: 'medicine'
+                    }))
+                  }}
+                >
+                  방제
+                </button>
+                <button 
+                  type="button"
+                  className={classNames({
+                    on: doc_type === 'herb'
+                  })}
+                  onClick={() => {
+                    setURL(curr => ({
+                      ...curr,
+                      order_by: orderBy === 'dependency_count_desc' ? 'view_count_desc' : order_by,
+                      doc_type: 'herb'
+                    }))
+                  }}
+                >
+                  약재
+                </button>
+                <button
+                  type="button"
+                  className={classNames({
+                    on: doc_type === 'topic'
+                  })}
+                  onClick={() => {
+                    setURL(curr => ({
+                      ...curr,
+                      order_by: orderBy === 'dependency_count_desc' ? 'view_count_desc' : order_by,
+                      doc_type: 'topic'
+                    }))
+                  }}
+                >
+                  토픽
+                </button>
+              </div>
+              {access && (
+                <div>
+                  <select
+                    value={only}
+                    onChange={({target: {value}}) => {
+                      setURL(curr => ({
+                        ...curr,
+                        page: 1,
+                        _only: value
+                      }))
+                    }}
+                  >
+                    <option value="">전체보기</option>
+                    <option value="bookmarked_wiki">북마크 보기(사전)</option>
+                    <option value="bookmarked_block">북마크 보기(컨텐츠)</option>
+                  </select>
+                </div>
+              )}
+            </ViewTypeDiv>
+            <div className="search-wrapper">
+              <StyledSearchInput
+                className={classNames({
+                  full: doc_type !== 'medicine'
+                })}
+                value={search}
+                clearImg={staticUrl('/static/images/icon/icon-clear-btn.png')}
+                searchOnImg={staticUrl('/static/images/icon/icon-search-on.png')}
+                searchOffImg={staticUrl('/static/images/icon/icon-search-off.png')}
+                onChange={(value) => setSearch(value)}
+                onSubmit={() => {
+                  setURL((curr) => ({
+                    ...curr,
+                    page: 1, 
+                    q: search
+                  }));
+                }}
+              />
+              {doc_type === 'medicine' && (
+                <SearchBtn
+                  type="button"
+                  className={classNames('btn-toggle', {
+                    on: isDetail
+                  })}
+                  onClick={() => {
+                    setIsDetail(curr => !curr);
+                  }}
+                >
+                  상세검색<span/>
+                </SearchBtn>
+              )}
+              
+            </div>
+            {(isDetail && doc_type === 'medicine' )&& (
+              <WikiSearchForm
+                clearImg={staticUrl('/static/images/icon/icon-clear-btn.png')}
+                onDetailSearch={param => {
+                  setURL(() => ({
+                    ...param,
+                    page: 1,
+                    q: _q,
+                    order_by: orderBy,
+                    doc_type: doc_type,
+                    is_detail: isDetail,
+                  }));
+                }}
+              />
+            )}
+            <div className="content">
+              <div className="header">
+                <h2>{title}</h2>
+                <span>
+                  <select
+                    value={orderBy}
+                    onChange={(e) => {
+                      const {target: {value}} = e;
+                      setURL(param => ({
+                        ...param,
+                        page: 1,
+                        order_by: value,
+                        is_detail: isDetail
+                      }))
+                    }}
+                  >
+                    <option value="view_count_desc">조회순</option>
+                    <option value="name_asc">가나다순</option>
+                    {doc_type === 'medicine' && (
+                      <option value="dependency_count_desc">약재 많은순</option>
+                    )}
+                  </select>
+                </span>
+              </div>
+              {!isEmpty(nodes) ? (
+                <DefaultUl>
+                  {nodes.map(({code, ...wiki}) => (
+                    <WikiItem
+                      key={code}
+                      code={code}
+                      access={access}
+                      updateQuery={updateQuery}
+                      {...wiki}
+                    />
+                  ))}
+                </DefaultUl>
+              ) : (
+                <NoContentP>
+                  {search && '검색'} 결과가 없습니다.
+                </NoContentP>
+              )}
+            </div>
+            {!!total_count && (
+              <Pagination
+                totalCount={parseInt(total_count) || 0}
+                currentPage={parseInt(page) || 1}
+                pageSize={PAGE_SIZE}
+                pageGroupSize={10}
+                onClick={page => {
+                  setURL(param => ({
+                    ...param,
+                    page,
+                    is_detail: isDetail 
+                  }))
+                }}
+              />
+            )}
+          </WikisWrapperDiv>
+        </div>
+      </PageWrapperSection>
+    </>
+  )
+})
+
+export default Wiki;

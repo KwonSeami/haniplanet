@@ -1,0 +1,11 @@
+export const KEY_DESCRIPTION = 'description';
+export const KEY_OG_TYPE = 'og:type';
+export const KEY_OG_SITE_NAME = 'og:site_name';
+export const KEY_OG_TITLE = 'og:title';
+export const KEY_OG_DESCRIPTION = 'og:description';
+export const KEY_OG_IMAGE = 'og:image';
+export const KEY_TWITTER_CARD = 'twitter:card';
+export const KEY_TWITTER_SITE = 'twitter:site';
+export const KEY_TWITTER_TITLE = 'twitter:title';
+export const KEY_TWITTER_DESCRIPTION = 'twitter:description';
+export const KEY_TWITTER_IMAGE = 'twitter:image';

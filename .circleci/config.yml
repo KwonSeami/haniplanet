@@ -1,0 +1,254 @@
+version: 2.1
+jobs:
+  build-and-deploy:
+    working_directory: /app
+    docker:
+      - image: ${BUILDPACK_AWS_ECR_ENDPOINT}/${BUILDPACK_AWS_ECR_REPONAME}:${BUILDPACK_AWS_ECR_VERSION}
+        aws_auth:
+          aws_access_key_id: ${AWS_ACCESS_KEY_ID}
+          aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+    steps:
+      - checkout
+      - run:
+          name: Settings for Jandi Notification
+          command: |
+            echo 'export JANDI_REPOSITORY_NAME="${CIRCLE_PROJECT_REPONAME}"' >> $BASH_ENV;
+            echo 'export JANDI_BRANCH_NAME="${CIRCLE_BRANCH}"' >> $BASH_ENV;
+            echo 'export JANDI_SHORT_COMMIT_ID="${CIRCLE_SHA1:0:7}"' >> $BASH_ENV;
+            echo 'export JANDI_BUILD_USERNAME="${CIRCLE_USERNAME}"' >> $BASH_ENV;
+            echo 'export JANDI_GITHUB_COMMIT_INFO_URL="https://github.com/haniplanet/${CIRCLE_PROJECT_REPONAME}/commit/${CIRCLE_SHA1}"' >> $BASH_ENV;
+            echo 'export JANDI_CIRCLECI_INFO_URL="${CIRCLE_BUILD_URL}"' >> $BASH_ENV;
+
+      - run:
+          name: Notify to Jandi messenger
+          command: |
+            curl \
+            -X POST ${CIRCLECI_JANDI_WEBHOOK_URL} \
+            -H "Accept: application/vnd.tosslab.jandi-v2+json" \
+            -H "Content-Type: application/json" \
+            --data-binary '{"body":"**CI/CD 작업을 시작합니다.**","connectColor":"#000000","connectInfo":[{"title":"GitHub repository & branch name","description":"'"${JANDI_REPOSITORY_NAME}"' ('"${JANDI_BRANCH_NAME})"'"},{"title":"GitHub commit id(short)","description":"'"${JANDI_SHORT_COMMIT_ID}"'"},{"title":"Build username","description":"'"${JANDI_BUILD_USERNAME}"'"},{"title":"","description":"[Commit 정보 확인]('"${JANDI_GITHUB_COMMIT_INFO_URL}"')\n[CI/CD 정보 확인]('"${JANDI_CIRCLECI_INFO_URL}"')"}]}'
+
+      - run:
+          name: Install dependencies
+          command: |
+            aws configure set aws_access_key_id ${AWS_ACCESS_KEY_ID}
+            aws configure set aws_secret_access_key ${AWS_SECRET_ACCESS_KEY}
+            aws configure set region ${AWS_REGION}
+            aws configure set output ${AWS_OUTPUT}
+
+      - run:
+          name: Environment variables setting
+          command: |
+            if [[ ${CIRCLE_BRANCH} == release/* ]]; then
+              echo 'export MODE="stage"' >> $BASH_ENV
+              echo 'export BRANCH_KEY='$(echo $CIRCLE_BRANCH | cut -d / -f 2 | cut -d - -f 1,2 | sed -e 's/\-//g') >> $BASH_ENV
+              echo 'export MODE_NAME="release-${BRANCH_KEY}"' >> $BASH_ENV
+              echo 'export PC_DOMAIN="${BRANCH_KEY}-pc.huplanet.kr"' >> $BASH_ENV
+              echo 'export MOBILE_DOMAIN="${BRANCH_KEY}-mobile.huplanet.kr"' >> $BASH_ENV
+              echo 'export SCOPE="hani-stage"' >> $BASH_ENV
+              echo 'export RELEASE_API_ENDPOINT="${BRANCH_KEY}-api.huplanet.kr"' >> $BASH_ENV
+              echo 'export API_ENDPOINT="${RELEASE_API_ENDPOINT}"' >> $BASH_ENV
+
+            elif [[ ${CIRCLE_BRANCH} == stage ]]; then
+              echo 'export MODE="stage"' >> $BASH_ENV
+              echo 'export MODE_NAME="stage"' >> $BASH_ENV
+              echo 'export PC_DOMAIN="www.huplanet.kr"' >> $BASH_ENV
+              echo 'export MOBILE_DOMAIN="mobile.huplanet.kr"' >> $BASH_ENV
+              echo 'export BRANCH_KEY="api"' >> $BASH_ENV
+              echo 'export SCOPE="hani-stage"' >> $BASH_ENV
+              echo 'export API_ENDPOINT="api.huplanet.kr"' >> $BASH_ENV
+
+            elif [[ ${CIRCLE_BRANCH} == master ]]; then
+              echo 'export MODE="production"' >> $BASH_ENV
+              echo 'export MODE_NAME="production"' >> $BASH_ENV
+              echo 'export PC_DOMAIN="www.haniplanet.com"' >> $BASH_ENV
+              echo 'export MOBILE_DOMAIN="mobile.haniplanet.com"' >> $BASH_ENV
+              echo 'export BRANCH_KEY="api"' >> $BASH_ENV
+              echo 'export SCOPE="hani-production"' >> $BASH_ENV
+              echo 'export API_ENDPOINT="api.haniplanet.com"' >> $BASH_ENV
+
+            else
+              echo "[HANIPLANET]Wrong branch. Check your branch settings."
+              exit 1
+
+            fi
+
+            echo 'export JANDI_SUCCESS_INFO="- Mode: ${MODE_NAME}\n- PC URL: https://${PC_DOMAIN}/ \n- Mobile URL: https://${MOBILE_DOMAIN}/ \n- API endpoint: https://${API_ENDPOINT}/"' >> $BASH_ENV
+
+      - run:
+          name: Create or setting something for release branches
+          command: |
+            if [[ ${CIRCLE_BRANCH} == release/* ]]; then
+
+              set +e
+
+              cp -rf ./.circleci/route53.json ./route53.json
+              sed -i 's|%DOMAIN%|'"${PC_DOMAIN//&/\\&}"'|g' route53.json
+              aws route53 change-resource-record-sets --hosted-zone-id ${STAGE_ROUTE53_HOSTEDZONEID} --change-batch file://route53.json
+              rm -rf route53.json
+
+              cp -rf ./.circleci/route53.json ./route53.json
+              sed -i 's|%DOMAIN%|'"${MOBILE_DOMAIN//&/\\&}"'|g' route53.json
+              aws route53 change-resource-record-sets --hosted-zone-id ${STAGE_ROUTE53_HOSTEDZONEID} --change-batch file://route53.json
+              rm -rf route53.json
+
+              set -e
+
+              # end-point가 존재하지 않으면 Stage의 end-point를 사용하도록 한다.
+              if getent hosts "${RELEASE_API_ENDPOINT}" >/dev/null; then
+                echo 'export API_ENDPOINT="${RELEASE_API_ENDPOINT}"' >> $BASH_ENV
+              else
+                echo 'export API_ENDPOINT="api.huplanet.kr"' >> $BASH_ENV
+              fi
+
+            fi
+
+      - run:
+          name: PC version setting
+          command: |
+            cp -rf ./.circleci/now.json ./www/pc/now.json
+            cd ./www/pc/
+
+            sed -i 's|%ALIAS%|'"${PC_DOMAIN//&/\\&}"'|g' now.json
+            sed -i 's|%MODE_NAME%|'"${MODE_NAME//&/\\&}"'|g' now.json
+            sed -i 's|%DEVICE%|pc|g' now.json
+            sed -i 's|%SCOPE%|'"${SCOPE//&/\\&}"'|g' now.json
+
+            sed -i 's|https\:\/\/github.com\/haniplanet\/atlaskit-custom-editor.git|https\:\/\/'"${GITHUB_TOKEN//&/\\&}"'\@github.com\/haniplanet\/atlaskit-custom-editor.git|g' package.json
+            sed -i 's|%API_ENDPOINT%|https://'"${API_ENDPOINT//&/\\&}"'|g' package.json
+            sed -i 's|%MODE%|'"${MODE//&/\\&}"'|g' package.json
+            sed -i 's|\"https\:\/\/github.com\/haniplanet\/atlaskit-custom-editor.git/|"https\:\/\/'"${GITHUB_TOKEN//&/\\&}"'\@github.com\/haniplanet\/atlaskit-custom-editor.git|g' yarn.lock
+
+      - run:
+          name: Mobile version setting
+          command: |
+            cp -rf ./.circleci/now.json ./www/mobile/now.json
+            cd ./www/mobile/
+
+            sed -i 's|%ALIAS%|'"${MOBILE_DOMAIN//&/\\&}"'|g' now.json
+            sed -i 's|%MODE_NAME%|'"${MODE_NAME//&/\\&}"'|g' now.json
+            sed -i 's|%DEVICE%|mobile|g' now.json
+            sed -i 's|%SCOPE%|'"${SCOPE//&/\\&}"'|g' now.json
+
+            sed -i 's|https\:\/\/github.com\/haniplanet\/atlaskit-custom-editor.git|https\:\/\/'"${GITHUB_TOKEN//&/\\&}"'\@github.com\/haniplanet\/atlaskit-custom-editor.git|g' package.json
+            sed -i 's|%API_ENDPOINT%|https://'"${API_ENDPOINT//&/\\&}"'|g' package.json
+            sed -i 's|%MODE%|'"${MODE//&/\\&}"'|g' package.json
+            sed -i 's|\"https\:\/\/github.com\/haniplanet\/atlaskit-custom-editor.git/|"https\:\/\/'"${GITHUB_TOKEN//&/\\&}"'\@github.com\/haniplanet\/atlaskit-custom-editor.git|g' yarn.lock
+
+      - run:
+          name: Check domain name is activate
+          command: |
+            cd ./www/pc/
+
+            # Release branch이면서 최초 deploy의 경우, AWS Route53에서 해당 도메인이 전파될 때 까지 기다려야 함.
+            now certs ls --token ${ZEIT_TOKEN} --scope ${SCOPE} > check_now_certificate.tmp
+            if [[ ${CIRCLE_BRANCH} == release/* ]] && ! grep -q ${BRANCH_KEY} check_now_certificate.tmp; then
+              echo "[HANIPLANET]Wait for domain name activate from AWS Route 53... (5 minutes)"
+              sleep 300
+            else
+              # 해당 도메인이 deploy가 아닐 경우, now.json에서 alias를 삭제하여 준다.
+              sed -i '/\"alias\"/d' ./now.json
+              sed -i '/\"alias\"/d' ../mobile/now.json
+            fi
+            rm -rf check_now_certificate.tmp || true
+
+      - run:
+          name: PC version build and deploy
+          command: |
+            cd ./www/pc/
+
+            now secrets list --token ${ZEIT_TOKEN} --scope ${SCOPE} > check_now_secrets.tmp
+            if ! grep -q npm_token check_now_secrets.tmp; then
+              now secrets add npm_token ${NPM_TOKEN} --token ${ZEIT_TOKEN} --scope ${SCOPE}
+            fi
+            rm -rf check_now_secrets.tmp || true
+
+            # For debugging
+            cat now.json
+
+            now --prod --debug --confirm --no-clipboard --token ${ZEIT_TOKEN} --local-config ./now.json
+
+            # PC domain alias
+            sleep 20
+            now list --token ${ZEIT_TOKEN} > now_list.tmp
+            export TEMP_NOW_DOMAIN=$(cat now_list.tmp | sed -n "/hani-fe-${MODE_NAME}-pc-/s/ \+/ /gp" | cut -d \  -f 3)
+            now alias ${TEMP_NOW_DOMAIN} ${PC_DOMAIN} --token ${ZEIT_TOKEN}
+            rm -rf now_list.tmp
+
+      - run:
+          name: PC version build and deploy(failed logs)
+          when: on_fail
+          command: |
+            cd ./www/pc/
+
+            now list --token ${ZEIT_TOKEN} > now_list.tmp
+            export TEMP_NOW_DOMAIN=$(cat now_list.tmp | sed -n "/hani-fe-${MODE_NAME}-pc-/s/ \+/ /gp" | cut -d \  -f 3)
+            now logs --token ${ZEIT_TOKEN} ${TEMP_NOW_DOMAIN}
+            rm -rf now_list.tmp
+
+            curl \
+            -X POST ${CIRCLECI_JANDI_WEBHOOK_URL} \
+            -H "Accept: application/vnd.tosslab.jandi-v2+json" \
+            -H "Content-Type: application/json" \
+            --data-binary '{"body":"**CI/CD 작업에 실패하였습니다.**","connectColor":"#FF0000","connectInfo":[{"title":"GitHub repository & branch name","description":"'"${JANDI_REPOSITORY_NAME}"' ('"${JANDI_BRANCH_NAME})"'"},{"title":"GitHub commit id(short)","description":"'"${JANDI_SHORT_COMMIT_ID}"'"},{"title":"Build username","description":"'"${JANDI_BUILD_USERNAME}"'"},{"title":"","description":"[Commit 정보 확인]('"${JANDI_GITHUB_COMMIT_INFO_URL}"')\n[CI/CD 정보 확인]('"${JANDI_CIRCLECI_INFO_URL}"')"}]}'
+
+      - run:
+          name: Mobile version build and deploy
+          command: |
+            cd ./www/mobile/
+
+            now secrets list --token ${ZEIT_TOKEN} --scope ${SCOPE} > check_now_secrets.tmp
+            if ! grep -q npm_token check_now_secrets.tmp; then
+              now secrets add npm_token ${NPM_TOKEN} --token ${ZEIT_TOKEN} --scope ${SCOPE}
+            fi
+            rm -rf check_now_secrets.tmp || true
+
+            # For debugging
+            cat now.json
+
+            now --prod --debug --confirm --no-clipboard --token ${ZEIT_TOKEN} --local-config ./now.json
+
+            # Mobile domain alias
+            sleep 20
+            now list --token ${ZEIT_TOKEN} > now_list.tmp
+            export TEMP_NOW_DOMAIN=$(cat now_list.tmp | sed -n "/hani-fe-${MODE_NAME}-mobile-/s/ \+/ /gp" | cut -d \  -f 3)
+            now alias ${TEMP_NOW_DOMAIN} ${MOBILE_DOMAIN} --token ${ZEIT_TOKEN}
+            rm -rf now_list.tmp
+
+      - run:
+          name: Mobile version build and deploy(failed logs)
+          when: on_fail
+          command: |
+            cd ./www/mobile/
+
+            now list --token ${ZEIT_TOKEN} > now_list.tmp
+            export TEMP_NOW_DOMAIN=$(cat now_list.tmp | sed -n "/hani-fe-${MODE_NAME}-mobile-/s/ \+/ /gp" | cut -d \  -f 3)
+            now logs --token ${ZEIT_TOKEN} ${TEMP_NOW_DOMAIN}
+            rm -rf now_list.tmp
+
+            curl \
+            -X POST ${CIRCLECI_JANDI_WEBHOOK_URL} \
+            -H "Accept: application/vnd.tosslab.jandi-v2+json" \
+            -H "Content-Type: application/json" \
+            --data-binary '{"body":"**CI/CD 작업에 실패하였습니다.**","connectColor":"#FF0000","connectInfo":[{"title":"GitHub repository & branch name","description":"'"${JANDI_REPOSITORY_NAME}"' ('"${JANDI_BRANCH_NAME})"'"},{"title":"GitHub commit id(short)","description":"'"${JANDI_SHORT_COMMIT_ID}"'"},{"title":"Build username","description":"'"${JANDI_BUILD_USERNAME}"'"},{"title":"","description":"[Commit 정보 확인]('"${JANDI_GITHUB_COMMIT_INFO_URL}"')\n[CI/CD 정보 확인]('"${JANDI_CIRCLECI_INFO_URL}"')"}]}'
+
+      - run:
+          name: Notify to Jandi messanger(success)
+          command: |
+            curl \
+            -X POST ${CIRCLECI_JANDI_WEBHOOK_URL} \
+            -H "Accept: application/vnd.tosslab.jandi-v2+json" \
+            -H "Content-Type: application/json" \
+            --data-binary '{"body":"**CI/CD 작업이 성공적으로 종료되었습니다.**","connectColor":"#00FF00","connectInfo":[{"title":"GitHub repository & branch name","description":"'"${JANDI_REPOSITORY_NAME}"' ('"${JANDI_BRANCH_NAME})"'"},{"title":"GitHub commit id(short)","description":"'"${JANDI_SHORT_COMMIT_ID}"'"},{"title":"Build username","description":"'"${JANDI_BUILD_USERNAME}"'"},{"title":"Environment information","description":"'"${JANDI_SUCCESS_INFO}"'"},{"title":"","description":"[Commit 정보 확인]('"${JANDI_GITHUB_COMMIT_INFO_URL}"')\n[CI/CD 정보 확인]('"${JANDI_CIRCLECI_INFO_URL}"')"}]}'
+
+workflows:
+  version: 2.1
+  workflow:
+    jobs:
+      - build-and-deploy:
+          filters:
+            branches:
+              only:
+                - /release\/.*/
+                - stage
+                - master

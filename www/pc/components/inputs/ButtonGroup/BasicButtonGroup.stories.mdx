@@ -1,0 +1,25 @@
+import {Meta, Story, Preview, Props} from '@storybook/addon-docs/blocks';
+import BasicButtonGroup from './BasicButtonGroup';
+
+<Meta title="style|components.inputs.buttons.ButtonGroup" component={BasicButtonGroup} />
+
+# BasicButtonGroup
+
+`ButtonGroup` 컴포넌트에 기본적은 스타일을 입힌 Styled Component입니다.
+
+<Props of={BasicButtonGroup} />
+
+<Preview>
+  <Story name="BasicButtonGroup">
+    <BasicButtonGroup
+      leftButton={{
+        children: '취소',
+        onClick: () => alert('취소'),
+      }}
+      rightButton={{
+        children: '확인',
+        onClick: () => alert('확인'),
+      }}
+    />
+  </Story>
+</Preview>

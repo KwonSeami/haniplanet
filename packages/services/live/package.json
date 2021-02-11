@@ -1,0 +1,20 @@
+{
+  "name": "@hanii/planet-live-service",
+  "version": "0.0.1",
+  "description": "'Naver Live Station'을 사용하여 라이브 서비스 구축",
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haniplanet/hani-fe.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/haniplanet/issues/issues"
+  },
+  "homepage": "https://github.com/haniplanet/hani-fe#readme"
+}

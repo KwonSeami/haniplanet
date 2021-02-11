@@ -1,0 +1,11 @@
+{
+  "Comment": "CREATE/DELETE/UPSERT a record",
+  "Changes": [{
+    "Action": "CREATE",
+    "ResourceRecordSet": {
+      "Name": "%DOMAIN%",
+      "Type": "CNAME",
+      "TTL": 300,
+      "ResourceRecords": [{ "Value": "alias.zeit.co"}]
+    }}]
+}

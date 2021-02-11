@@ -1,0 +1,1 @@
+interface IActivity extends IPost {}

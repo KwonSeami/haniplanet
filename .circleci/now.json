@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "hani-fe-%MODE_NAME%-%DEVICE%",
+  "alias": "%ALIAS%",
+  "scope": "%SCOPE%",
+  "regions": ["icn1", "hnd1"],
+  "build": {
+    "env": {
+      "NPM_TOKEN": "@npm_token"
+    }
+  }
+}

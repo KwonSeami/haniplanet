@@ -1,0 +1,24 @@
+module.exports = {
+  stories: [
+    '../components/**/*.stories.ts',
+    '../components/**/*.stories.tsx',
+    '../components/**/*.stories.mdx',
+  ],
+  addons: [
+    '@storybook/addon-actions',
+    '@storybook/addon-links',
+    '@storybook/addon-docs',
+  ],
+
+  webpackFinal: async config => {
+    config.module.rules.push({
+      test: /\.(ts|tsx)$/,
+      loader: require.resolve('babel-loader'),
+      options: {
+        presets: [['react-app', { flow: false, typescript: true }]],
+      },
+    });
+    config.resolve.extensions.push('.ts', '.tsx');
+    return config;
+  },
+};

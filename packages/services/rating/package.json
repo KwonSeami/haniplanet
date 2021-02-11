@@ -1,0 +1,33 @@
+{
+  "name": "@hanii/planet-rating",
+  "version": "0.0.9",
+  "description": "교수평가 모두나와 중복 코드 모듈화",
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haniplanet/hani-fe.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/haniplanet/issues/issues"
+  },
+  "homepage": "https://github.com/haniplanet/hani-fe/blob/master/packages/services/rating/README.md",
+  "devDependencies": {
+    "@types/classnames": "^2.2.9",
+    "@types/styled-components": "^4.4.0",
+    "react": "^16.12.0",
+    "styled-components": "^4.4.1"
+  },
+  "dependencies": {
+    "classnames": "^2.2.6"
+  },
+  "peerDependencies": {
+    "react": "^16.12.0",
+    "styled-components": "^4.4.1"
+  }
+}

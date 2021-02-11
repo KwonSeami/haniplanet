@@ -1,0 +1,10 @@
+export const $POINT_BLUE = '#2b89ff';
+export const $LIGHT_BLUE = '#edf5ff';
+export const $FONT_COLOR = '#333';
+export const $GRAY = '#666';
+export const $THIN_GRAY = '#ccc';
+export const $LIGHT_GRAY = '#b6b6b6';
+export const $TEXT_GRAY = '#bbb';
+export const $BORDER_COLOR = '#ddd';
+export const $WHITE = '#fff';
+export const $FLASH_WHITE = '#f5f7f9';

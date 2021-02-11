@@ -1,0 +1,20 @@
+{
+  "name": "@dohyeon/planet-types",
+  "version": "1.0.2",
+  "description": "types",
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d0hyeon/haniplanet-fe.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://github.com/d0hyeon/haniplanet#readme",
+  "dependencies": {
+    "rollup": "^2.10.9"
+  }
+}

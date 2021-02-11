@@ -1,0 +1,110 @@
+---
+name: Button
+menu: Component
+route: /Component/Button
+---
+
+import {Playground} from 'docz';
+import Button from './';
+import {$POINT_BLUE, $LIGHT_BLUE, $FONT_COLOR, $GRAY, $FLASH_WHITE} from '../../../styles/variables.types';
+
+# Button
+
+공용으로 사용되는 버튼 컴포넌트입니다.
+
+PC, Mobile 모두 사용가능하며, 특정 페이지에서만 사용되는 로직과 스타일을 해당 컴포넌트에 추가하지 말아주세요.
+
+## Props
+
+- `className`?: `Button` 컴포넌트를 `styled-components`로 wrapping하기 위해 `className` props를 사용합니다.
+  - `string`
+- `variant`?: `text`만 존재하는 버튼인지, `background` 및 `border`이 존재하는 버튼인지 구분합니다.
+  - `text` 또는 `contained` (값을 넣지 않으면, `contained`와 동일한 형태가 됩니다)
+- `border`?: `border`관련
+  - `{ color?: string, radius?: string, width?: string }`
+- `backgroundColor`?: `backgroundColor` 지정
+  - `string` (`variables.types`의 상수에서 지정을 권장합니다)
+- `font`?: `font`관련
+  - `{ color?: string, size?: string }`
+- `onClick`
+  - `(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;`
+
+## Usage
+
+### Contained Button
+
+<Playground style={{display: 'flex', justifyContent: 'space-around'}}>
+  <Button
+    variant="contained"
+    border={{radius: "5px"}}
+    backgroundColor={$POINT_BLUE}
+    font={{color: $FLASH_WHITE}}
+  >
+    Button
+  </Button>
+  <Button
+    variant="contained"
+    border={{radius: "5px"}}
+    backgroundColor={$LIGHT_BLUE}
+  >
+    Button
+  </Button>
+  <Button
+    variant="contained"
+    border={{radius: "5px"}}
+    backgroundColor={$FONT_COLOR}
+    font={{color: $FLASH_WHITE}}
+  >
+    Button
+  </Button>
+  <Button
+    variant="contained"
+    border={{radius: "5px"}}
+    backgroundColor={$GRAY}
+    font={{color: $FLASH_WHITE}}
+  >
+    Button
+  </Button>
+  <Button
+    variant="contained"
+    border={{radius: "5px"}}
+    backgroundColor={$FLASH_WHITE}
+  >
+    Button
+  </Button>
+</Playground>
+
+### Text Buttons
+
+<Playground style={{display: 'flex', justifyContent: 'space-around'}}>
+  <Button
+    variant="text"
+    font={{color: $POINT_BLUE}}
+  >
+    Button
+  </Button>
+  <Button
+    variant="text"
+    font={{color: $LIGHT_BLUE}}
+  >
+    Button
+  </Button>
+  <Button
+    variant="text"
+    font={{color: $FONT_COLOR}}
+  >
+    Button
+  </Button>
+  <Button
+    variant="text"
+    font={{color: $GRAY}}
+  >
+    Button
+  </Button>
+  <Button
+    variant="text"
+    font={{color: $FLASH_WHITE}}
+  >
+    Button
+  </Button>
+</Playground>

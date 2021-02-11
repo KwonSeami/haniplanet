@@ -1,0 +1,26 @@
+{
+  "presets": [
+    [
+      "next/babel",
+      {
+        "preset-env": {
+          "corejs": "3.2.1",
+          "targets": {
+            "browsers": [
+              "IE >= 11"
+            ]
+          },
+          "useBuiltIns": "entry"
+        }
+      }
+    ]
+  ],
+  "plugins": [
+    [
+      "styled-components",
+      {
+        "ssr": true
+      }
+    ]
+  ]
+}
